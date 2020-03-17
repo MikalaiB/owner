@@ -119,7 +119,7 @@ class PropertiesInvocationHandler implements InvocationHandler, Serializable {
      * @return formatted key
      */
     private String formatKey(String key, Object... args) {
-    	if (null == key) {
+    	if (null == key || null == args) {
     		return key;
     	}
         return String.format(key, args[0].toString());
