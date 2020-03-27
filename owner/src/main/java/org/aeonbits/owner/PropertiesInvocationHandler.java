@@ -14,6 +14,9 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.aeonbits.owner.Config.DisableableFeature.PARAMETER_FORMATTING;
 import static org.aeonbits.owner.Config.DisableableFeature.VARIABLE_EXPANSION;
@@ -86,6 +89,13 @@ class PropertiesInvocationHandler implements InvocationHandler, Serializable {
             String unexpandedKey = key(method);
             value = propertiesManager.getProperty(unexpandedKey);
         }
+        
+		// get value by name space regexp (i.e. capabilities.* - extracts all properties
+		// capabilities.timeout, capabilities.appPath etc)
+		if (value == null) {
+			value = getValueByNameSpace(key);
+		}
+        
         if (value == null)
             return null;
         // Before processing the value, we decrypt it if necessary.
@@ -176,4 +186,16 @@ class PropertiesInvocationHandler implements InvocationHandler, Serializable {
         in.defaultReadObject();
         delegates = findDelegates(propertiesManager, jmxSupport);
     }
+    
+	private String getValueByNameSpace(final String namespace) {
+		Set<String> propertyNames = propertiesManager.propertyNames().parallelStream()
+				.filter(name -> name.matches(namespace)).collect(Collectors.toSet());
+		if (propertyNames.isEmpty()) {
+			return null;
+		}
+		
+		return propertyNames.parallelStream()
+				.map(propertyName -> String.format("%s->%s", propertyName, propertiesManager.getProperty(propertyName)))
+				.collect(Collectors.joining(";;"));
+	}
 }
