@@ -121,8 +121,7 @@ class PropertiesInvocationHandler implements InvocationHandler, Serializable {
     	if (null == defValue) {
     		return false;
     	}
-    	return defValue.equals(value);
-    	
+    	return defValue.value().equals(value);
     }
 
     private String preProcess(Method method, String value) {
