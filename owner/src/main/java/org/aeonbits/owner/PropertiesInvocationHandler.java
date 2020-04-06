@@ -18,6 +18,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.aeonbits.owner.Config.DefaultValue;
+
 import static org.aeonbits.owner.Config.DisableableFeature.PARAMETER_FORMATTING;
 import static org.aeonbits.owner.Config.DisableableFeature.VARIABLE_EXPANSION;
 import static org.aeonbits.owner.Converters.SpecialValue.NULL;
@@ -92,8 +94,8 @@ class PropertiesInvocationHandler implements InvocationHandler, Serializable {
         
 		// get value by name space regexp (i.e. capabilities.* - extracts all properties
 		// capabilities.timeout, capabilities.appPath etc)
-		if (value == null) {
-			value = getValueByNameSpace(key);
+		if (value == null || isDefaultValueSelected(method, value)) {
+			value = getValueByNameSpace(key, value);
 		}
         
         if (value == null)
@@ -105,6 +107,22 @@ class PropertiesInvocationHandler implements InvocationHandler, Serializable {
         Object result = convert(method, method.getReturnType(), format(method, expandVariables(method, value), args));
         if (result == NULL) return null;
         return result;
+    }
+    
+    /**
+     * Checks whether default value has been set to the value
+     * 
+     * @param method
+     * @param value
+     * @return true if default value has been set
+     */
+    private boolean isDefaultValueSelected(final Method method, final String value) {
+    	DefaultValue defValue = method.getAnnotation(DefaultValue.class);
+    	if (null == defValue) {
+    		return false;
+    	}
+    	return defValue.equals(value);
+    	
     }
 
     private String preProcess(Method method, String value) {
@@ -187,11 +205,11 @@ class PropertiesInvocationHandler implements InvocationHandler, Serializable {
         delegates = findDelegates(propertiesManager, jmxSupport);
     }
     
-	private String getValueByNameSpace(final String namespace) {
-		Set<String> propertyNames = propertiesManager.propertyNames().parallelStream()
+	private String getValueByNameSpace(final String namespace, final String value) {
+		Set<String> propertyNames = propertiesManager.propertyNames().stream()
 				.filter(name -> name.matches(namespace)).collect(Collectors.toSet());
 		if (propertyNames.isEmpty()) {
-			return null;
+			return value;
 		}
 		
 		return propertyNames.parallelStream()
